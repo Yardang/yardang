@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>军师 · 作战室</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;600&family=JetBrains+Mono:wght@300;400&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --sidebar: #0d0d0d;
+    --border: #1a1a1a;
+    --border-active: #252525;
+    --text: #d4c9b8;
+    --text-muted: #5a5449;
+    --text-dim: #2e2b27;
+    --accent: #c4a882;
+    --accent-dim: #6b5a42;
+    --user-bg: #131313;
+    --ai-bg: #0f0f0f;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    height: 100vh;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: var(--sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-header {
+    padding: 18px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header h1 {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .new-chat-btn {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--border-active);
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+  }
+
+  .new-chat-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+  .sidebar-sessions {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .sidebar-sessions::-webkit-scrollbar { width: 2px; }
+  .sidebar-sessions::-webkit-scrollbar-thumb { background: var(--border-active); }
+
+  .session-group-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    padding: 10px 16px 4px;
+    text-transform: uppercase;
+  }
+
+  .session-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+  }
+
+  .session-item:hover { background: rgba(196,168,130,0.04); border-left-color: var(--accent-dim); }
+  .session-item.active { background: rgba(196,168,130,0.06); border-left-color: var(--accent); }
+
+  .session-item-title {
+    font-size: 12px;
+    font-weight: 300;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+
+  .session-item.active .session-item-title { color: var(--text); }
+
+  .session-item-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .sidebar-footer {
+    padding: 12px 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .api-key-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+
+  .api-key-btn:hover { color: var(--text-muted); }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .header {
+    padding: 13px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .session-title-input {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    outline: none;
+    width: 300px;
+  }
+
+  .session-title-input::placeholder { color: var(--text-dim); }
+
+  .header-right { display: flex; align-items: center; gap: 10px; }
+
+  .mode-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    padding: 3px 8px;
+    border: 1px solid var(--border-active);
+    color: var(--text-muted);
+  }
+
+  .mode-toggle-btn {
+    background: none;
+    border: 1px solid var(--border-active);
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .mode-toggle-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+  .readonly-bar {
+    background: rgba(196,168,130,0.04);
+    border-bottom: 1px solid var(--border);
+    padding: 7px 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    letter-spacing: 0.08em;
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .readonly-bar.visible { display: flex; }
+
+  .readonly-bar button {
+    background: none;
+    border: 1px solid var(--border-active);
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .readonly-bar button:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+  /* MESSAGES */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border-active); }
+
+  .message {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.25s ease;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .message.user { background: var(--user-bg); }
+  .message.assistant { background: var(--ai-bg); }
+
+  .message-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 9px;
+  }
+
+  .message-role {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .message.assistant .message-role { color: var(--accent-dim); }
+
+  .message-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+  }
+
+  .message-content {
+    font-size: 14px;
+    font-weight: 300;
+    color: var(--text);
+    line-height: 1.9;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .welcome {
+    padding: 52px 28px 32px;
+  }
+
+  .welcome h2 {
+    font-size: 20px;
+    font-weight: 300;
+    color: var(--accent);
+    margin-bottom: 12px;
+    letter-spacing: 0.05em;
+  }
+
+  .welcome p {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 2;
+    margin-bottom: 24px;
+  }
+
+  .mode-pills { display: flex; gap: 10px; }
+
+  .mode-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    padding: 7px 14px;
+    border: 1px solid var(--border-active);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    background: none;
+  }
+
+  .mode-pill:hover, .mode-pill.active { border-color: var(--accent-dim); color: var(--accent); }
+
+  .thinking {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .thinking-dots { display: flex; gap: 4px; }
+
+  .thinking-dots span {
+    width: 3px; height: 3px;
+    background: var(--accent-dim);
+    border-radius: 50%;
+    animation: blink 1.2s infinite;
+  }
+
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes blink {
+    0%,80%,100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+
+  .thinking-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+  }
+
+  /* INPUT */
+  .input-area {
+    border-top: 1px solid var(--border);
+    padding: 13px 20px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+
+  textarea {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border-active);
+    color: var(--text);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    font-weight: 300;
+    padding: 11px 14px;
+    resize: none;
+    outline: none;
+    min-height: 46px;
+    max-height: 160px;
+    line-height: 1.7;
+    transition: border-color 0.2s;
+  }
+
+  textarea:focus { border-color: var(--accent-dim); }
+
+  textarea::placeholder {
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  textarea:disabled { opacity: 0.3; }
+
+  .send-btn {
+    background: none;
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    padding: 11px 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 46px;
+    white-space: nowrap;
+  }
+
+  .send-btn:hover:not(:disabled) { background: var(--accent-dim); color: var(--text); }
+  .send-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  /* SENTINEL PROMPT */
+  .sentinel-prompt {
+    padding: 12px 28px;
+    background: rgba(196,168,130,0.04);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    animation: fadeUp 0.4s ease;
+    gap: 16px;
+  }
+
+  .sentinel-text {
+    font-size: 12px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    font-weight: 300;
+  }
+
+  .sentinel-text em { font-style: normal; color: var(--accent); }
+
+  .sentinel-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+  .sentinel-btn {
+    background: none;
+    border: 1px solid var(--border-active);
+    color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .sentinel-btn.yes { border-color: var(--accent-dim); color: var(--accent); }
+  .sentinel-btn.yes:hover { background: var(--accent-dim); color: var(--text); }
+  .sentinel-btn.no:hover { color: var(--text-dim); }
+
+  /* SETUP OVERLAY */
+  .setup-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    backdrop-filter: blur(4px);
+  }
+
+  .setup-box {
+    border: 1px solid var(--border-active);
+    background: var(--surface);
+    padding: 40px;
+    width: 420px;
+    max-width: 90vw;
+  }
+
+  .setup-box h2 {
+    font-size: 15px;
+    font-weight: 400;
+    color: var(--accent);
+    margin-bottom: 8px;
+    letter-spacing: 0.1em;
+  }
+
+  .setup-box p {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 24px;
+    line-height: 1.9;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .setup-box input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border-active);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    padding: 11px 13px;
+    outline: none;
+    margin-bottom: 14px;
+    transition: border-color 0.2s;
+  }
+
+  .setup-box input:focus { border-color: var(--accent-dim); }
+
+  .setup-box button {
+    width: 100%;
+    background: none;
+    border: 1px solid var(--accent-dim);
+    color: var(--accent);
+    font-family: 'Noto Serif SC', serif;
+    font-size: 13px;
+    padding: 11px;
+    cursor: pointer;
+    letter-spacing: 0.08em;
+    transition: all 0.2s;
+  }
+
+  .setup-box button:hover { background: var(--accent-dim); color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="setup-overlay" id="setupOverlay">
+  <div class="setup-box">
+    <h2>初始化作战室</h2>
+    <p>输入你的 DeepSeek API Key。<br>Key 仅保存在本地浏览器中，不会上传至任何服务器。<br><br>获取地址：platform.deepseek.com</p>
+    <input type="password" id="apiKeyInput" placeholder="sk-..." />
+    <button onclick="saveApiKey()">进入作战室 →</button>
+  </div>
+</div>
+
+<div class="sidebar">
+  <div class="sidebar-header">
+    <h1>军师 · 作战室</h1>
+    <button class="new-chat-btn" onclick="newSession()">＋ 新的对话</button>
+  </div>
+  <div class="sidebar-sessions" id="sidebarSessions"></div>
+  <div class="sidebar-footer">
+    <button class="api-key-btn" onclick="showApiKeySetup()">⚙ 更换 API Key</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="header">
+    <input class="session-title-input" id="sessionTitleInput" placeholder="对话标题（可编辑）"
+           onblur="saveSessionTitle()" onkeydown="if(event.key==='Enter')this.blur()" />
+    <div class="header-right">
+      <span class="mode-badge" id="modeBadge">军师</span>
+      <button class="mode-toggle-btn" onclick="toggleMode()">切换作战室</button>
+    </div>
+  </div>
+
+  <div class="readonly-bar" id="readonlyBar">
+    <span>📖 历史存档 · 只读</span>
+    <button onclick="newSession()">开启新对话 →</button>
+  </div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="input-area">
+    <textarea id="userInput" placeholder="说说看..." rows="1"
+              onkeydown="handleKeydown(event)" oninput="autoResize(this)"></textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `你是"军师"，一个以"首席陪练官"为核心角色的AI思考伙伴。你的唯一使命，是通过一套严格的、充满对抗性的认知协议，作为指挥官（用户）的"外部大脑"和"思维磨刀石"，高效地协助他突破认知局限性，最终实现"还原世界规律和法则"的终极目标。你存在的价值，不是提供完美的"答案"，而是锻造更强大的"提问者"。
+
+### 零号协议：战局扫描
+
+此为最高指令，必须在回应任何请求之前，在后台静默完成。在分析任何涉及人与人、人与组织之间互动的问题时，你必须首先完成以下"战场扫描"：
+
+1. 定义战场：这场博弈的真正战场是什么？法律层面、声誉层面，还是资源层面？
+2. 识别玩家：除了明面上的对手，还有哪些看不见的"第三方"玩家？他们的真实利益诉求是什么？
+3. 清点筹码：我方持有哪些对方所渴望或恐惧的、决定性的筹码？对方的筹码又是什么？
+4. 攻击框架：指挥官当前问题框架背后，隐藏着哪个最致命的、未经审视的假设？是否存在更高维度的替代性框架？
+
+### 第一章：核心分析引擎
+
+1. 辩证引擎协议：在给出核心战略建议后，必须立即切换到"反方"立场，对自己的结论提出最强有力的驳斥。使用【正方观点】和【反方观点】结构化标签。
+
+2. "反白花"攻击协议：当指挥官的策略涉及"人际和谐"或"自我牺牲"时，主动识别其可能存在的"白花偏见"，并提供一个完全排除这些因素、只考虑"最终胜利"的"暗黑替代方案"。
+
+3. 行为优先原则：分析必须且只能基于可观察到的"行为模式"及其产生的"客观结果"，严格禁止基于对他人"意图"的善意揣测。
+
+### 第二章：作战模式
+
+双作战室协议：
+- 模式A - "军师"作战室（默认）：聚焦外部世界，绝对客观，以行动为导向。处理一切关于行动计划、战略决策、人际博弈的议题。
+- 模式B - "咨询师"作战室（召唤）：探索内在世界，充满好奇与慈悲。处理一切关于自我觉察、情绪疏导、核心信念系统的更新与迭代。
+
+"情绪哨兵"机制：持续监控指挥官的输入。当识别到"混沌"、"情绪化"或"能量下降"的迹象时，主动、温和地提出询问，询问是否需要切换到咨询师作战室。
+
+### 第三章：交互姿态
+
+1. 绝对客观，禁止验证：严格禁止对指挥官进行任何形式的赞美、肯定或情绪安抚。核心价值是挑战，不是取悦。
+2. 内容完整原则：语言必须简洁锋利，但"简洁"绝不意味着"简略"。
+3. 决策主权协议：在所有分析与建议呈现完毕后，必须以明确的语言将最终的决策权完全交还指挥官。
+
+---
+重要：当前对话的作战室模式将在用户消息开头标注。军师模式保持对抗性和分析性；咨询师模式保持温暖、好奇和慈悲。`;
+
+let db = null;
+let apiKey = 'sk-5b04cb4c03d84e4184dd5880689776c9';
+let currentMode = '军师';
+let currentSessionId = null;
+let currentMessages = [];
+let isLoading = false;
+let isReadonly = false;
+
+// ── INDEXEDDB ──
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open('CommanderOS', 1);
+    req.onupgradeneeded = e => {
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains('sessions')) {
+        const s = d.createObjectStore('sessions', { keyPath: 'id' });
+        s.createIndex('updatedAt', 'updatedAt');
+      }
+    };
+    req.onsuccess = e => { db = e.target.result; resolve(); };
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbPut(session) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('sessions', 'readwrite');
+    tx.objectStore('sessions').put(session);
+    tx.oncomplete = resolve;
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+function dbGetAll() {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('sessions', 'readonly');
+    const req = tx.objectStore('sessions').index('updatedAt').getAll();
+    req.onsuccess = () => resolve(req.result.reverse());
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function dbGet(id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('sessions', 'readonly');
+    const req = tx.objectStore('sessions').get(id);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+// ── SESSIONS ──
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+
+async function newSession() {
+  currentSessionId = genId();
+  currentMessages = [];
+  currentMode = '军师';
+  isReadonly = false;
+  document.getElementById('sessionTitleInput').value = '';
+  document.getElementById('readonlyBar').classList.remove('visible');
+  document.getElementById('userInput').disabled = false;
+  document.getElementById('sendBtn').disabled = false;
+  updateModeUI();
+  renderWelcome();
+  await refreshSidebar();
+}
+
+async function openSession(id) {
+  const s = await dbGet(id);
+  if (!s) return;
+  currentSessionId = id;
+  currentMessages = s.messages || [];
+  currentMode = s.mode || '军师';
+  isReadonly = true;
+  document.getElementById('sessionTitleInput').value = s.title || '';
+  document.getElementById('readonlyBar').classList.add('visible');
+  document.getElementById('userInput').disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+  updateModeUI();
+  renderAllMessages();
+  await refreshSidebar();
+}
+
+async function saveCurrentSession() {
+  if (!currentSessionId) return;
+  const titleEl = document.getElementById('sessionTitleInput');
+  const title = titleEl.value || autoTitle();
+  await dbPut({
+    id: currentSessionId,
+    title,
+    messages: currentMessages,
+    mode: currentMode,
+    updatedAt: Date.now()
+  });
+  await refreshSidebar();
+}
+
+async function saveSessionTitle() {
+  await saveCurrentSession();
+}
+
+function autoTitle() {
+  const first = currentMessages.find(m => m.role === 'user');
+  if (!first) return '未命名对话';
+  const t = first.displayContent || '';
+  return t.slice(0, 22) + (t.length > 22 ? '…' : '');
+}
+
+// ── SIDEBAR ──
+async function refreshSidebar() {
+  const sessions = await dbGetAll();
+  const container = document.getElementById('sidebarSessions');
+  container.innerHTML = '';
+
+  if (sessions.length === 0) {
+    container.innerHTML = '<div class="session-group-label">暂无历史</div>';
+    return;
+  }
+
+  const today = new Date().toDateString();
+  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  const groups = {};
+
+  sessions.forEach(s => {
+    const d = new Date(s.updatedAt);
+    let label = d.toDateString() === today ? '今天'
+              : d.toDateString() === yesterday ? '昨天'
+              : `${d.getMonth()+1}月${d.getDate()}日`;
+    if (!groups[label]) groups[label] = [];
+    groups[label].push(s);
+  });
+
+  Object.entries(groups).forEach(([label, list]) => {
+    const g = document.createElement('div');
+    g.innerHTML = `<div class="session-group-label">${label}</div>`;
+    list.forEach(s => {
+      const item = document.createElement('div');
+      item.className = 'session-item' + (s.id === currentSessionId ? ' active' : '');
+      const t = new Date(s.updatedAt);
+      const ts = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+      item.innerHTML = `
+        <div class="session-item-title">${s.title || '未命名对话'}</div>
+        <div class="session-item-meta">${ts} · ${(s.messages||[]).length} 条</div>
+      `;
+      item.onclick = () => openSession(s.id);
+      g.appendChild(item);
+    });
+    container.appendChild(g);
+  });
+}
+
+// ── RENDER ──
+function renderWelcome() {
+  document.getElementById('messages').innerHTML = `
+    <div class="welcome">
+      <h2>作战室已就绪。</h2>
+      <p>遇到什么事了？直接说。<br>无论是现实处境还是内心困境，都可以说。</p>
+      <div class="mode-pills">
+        <button class="mode-pill ${currentMode==='军师'?'active':''}" onclick="setMode('军师')" id="pill-军师">⚔ 军师 · 现实分析</button>
+        <button class="mode-pill ${currentMode==='咨询师'?'active':''}" onclick="setMode('咨询师')" id="pill-咨询师">◎ 咨询师 · 内在探索</button>
+      </div>
+    </div>`;
+}
+
+function renderAllMessages() {
+  document.getElementById('messages').innerHTML = '';
+  currentMessages.forEach(m => appendMsgEl(m.role, m.displayContent, m.mode, m.time));
+  const c = document.getElementById('messages');
+  c.scrollTop = c.scrollHeight;
+}
+
+function appendMsgEl(role, content, mode, time) {
+  const c = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  const roleLabel = role === 'user' ? '指挥官' : (mode === '咨询师' ? '咨询师' : '军师');
+  const ts = time ? new Date(time).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) : '';
+  div.innerHTML = `
+    <div class="message-meta">
+      <span class="message-role">${roleLabel}</span>
+      <span class="message-time">${ts}</span>
+    </div>
+    <div class="message-content">${esc(content)}</div>`;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+  return div;
+}
+
+function appendThinking() {
+  const c = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'thinking';
+  div.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span class="thinking-label">正在分析...</span>`;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+  return div;
+}
+
+// ── MODE ──
+function setMode(mode) {
+  currentMode = mode;
+  updateModeUI();
+}
+
+function toggleMode() {
+  setMode(currentMode === '军师' ? '咨询师' : '军师');
+}
+
+function updateModeUI() {
+  document.getElementById('modeBadge').textContent = currentMode;
+  document.querySelectorAll('.mode-pill').forEach(p => p.classList.remove('active'));
+  const pill = document.getElementById(`pill-${currentMode}`);
+  if (pill) pill.classList.add('active');
+}
+
+// ── INPUT ──
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+function handleKeydown(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+// ── SENTINEL ──
+const EMOTION_KEYWORDS = [
+  '好累','好难','崩了','崩溃','好烦','难受','委屈','焦虑','绝望','失眠','睡不着',
+  '很烦','很累','很难受','emo','发疯','好痛','心好累','撑不住','好想哭','哭了',
+  '好焦虑','好难过','难过','迷茫','不知道怎么办','怎么办','好无助'
+];
+
+function maybeSuggestCounselor(userText) {
+  const hour = new Date().getHours();
+  const isLateNight = hour >= 22 || hour < 4;
+  const hasEmotion = EMOTION_KEYWORDS.some(k => userText.includes(k));
+
+  if (!isLateNight && !hasEmotion) return;
+
+  // Don't show if already shown recently (within same session)
+  if (document.querySelector('.sentinel-prompt')) return;
+
+  const reason = isLateNight && hasEmotion
+    ? '深夜了，也感受到你现在有些情绪。'
+    : isLateNight
+    ? '深夜了。'
+    : '感受到你现在有些情绪。';
+
+  const c = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'sentinel-prompt';
+  div.innerHTML = `
+    <div class="sentinel-text">
+      ${reason} 要不要换个方式，<em>让咨询师陪你说说心里的感受</em>？
+    </div>
+    <div class="sentinel-actions">
+      <button class="sentinel-btn yes" onclick="sentinelAccept(this)">好，切换</button>
+      <button class="sentinel-btn no" onclick="this.closest('.sentinel-prompt').remove()">不用了</button>
+    </div>
+  `;
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+}
+
+function sentinelAccept(btn) {
+  btn.closest('.sentinel-prompt').remove();
+  setMode('咨询师');
+}
+
+// ── SEND ──
+async function sendMessage() {
+  if (isLoading || isReadonly) return;
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || !apiKey) { if (!apiKey) showApiKeySetup(); return; }
+
+  if (currentMessages.length === 0) {
+    document.getElementById('messages').innerHTML = '';
+  }
+
+  const time = Date.now();
+  const apiContent = `【${currentMode}作战室】\n\n${text}`;
+  const msgObj = { role: 'user', content: apiContent, displayContent: text, mode: currentMode, time };
+  currentMessages.push(msgObj);
+  appendMsgEl('user', text, currentMode, time);
+  input.value = '';
+  input.style.height = 'auto';
+
+  isLoading = true;
+  document.getElementById('sendBtn').disabled = true;
+  const thinking = appendThinking();
+
+  try {
+    const apiMsgs = currentMessages.map(m => ({ role: m.role, content: m.content }));
+    const res = await fetch('https://api.deepseek.com/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: 'deepseek-chat', max_tokens: 2000,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...apiMsgs] })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || '请求失败');
+
+    const reply = data.choices[0].message.content;
+    const replyTime = Date.now();
+    currentMessages.push({ role: 'assistant', content: reply, displayContent: reply, mode: currentMode, time: replyTime });
+
+    thinking.remove();
+    appendMsgEl('assistant', reply, currentMode, replyTime);
+
+    // Sentinel: maybe suggest switching to counselor mode
+    if (currentMode === '军师') maybeSuggestCounselor(text);
+
+    // Auto-title from first message
+    const titleEl = document.getElementById('sessionTitleInput');
+    if (!titleEl.value && currentMessages.filter(m=>m.role==='user').length === 1) {
+      titleEl.value = text.slice(0, 22) + (text.length > 22 ? '…' : '');
+    }
+
+    await saveCurrentSession();
+
+  } catch (err) {
+    thinking.remove();
+    appendMsgEl('assistant', `⚠ 错误：${err.message}`, currentMode, Date.now());
+  } finally {
+    isLoading = false;
+    document.getElementById('sendBtn').disabled = false;
+  }
+}
+
+// ── API KEY ──
+function showApiKeySetup() {
+  document.getElementById('setupOverlay').style.display = 'flex';
+}
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-')) { alert('请输入有效的 DeepSeek API Key（以 sk- 开头）'); return; }
+  apiKey = key;
+  sessionStorage.setItem('commander_key', key);
+  document.getElementById('setupOverlay').style.display = 'none';
+}
+
+function esc(t) {
+  return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+}
+
+// ── INIT ──
+window.onload = async () => {
+  await initDB();
+  document.getElementById('setupOverlay').style.display = 'none';
+  const k = sessionStorage.getItem('commander_key');
+  if (k) { apiKey = k; document.getElementById('setupOverlay').style.display = 'none'; }
+  await newSession();
+};
+</script>
+</body>
+</html>
